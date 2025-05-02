@@ -1,0 +1,28 @@
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'
+
+name: generate thumbnails
+
+jobs:
+  check:
+    if: (startsWith(github.event.head_commit.message, 'check:') || (github.event_name == 'schedule'))
+    name: generate thumbnails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # Nix Flakes doesn't work on shallow clones
+          fetch-depth: 0
+      - run: sudo apt-get install imagemagick
+      - run: |
+          shopt -s nullglob
+          for image in ./*/orig.png; do convert "$image" -resize 340x "$(dirname $image)/thumbnail.png"; done
+          for image in ./*/orig.jpeg; do convert "$image" -resize 340x "$(dirname $image)/thumbnail.jpeg"; done
+          for image in ./*/orig.jpg; do convert "$image" -resize 340x "$(dirname $image)/thumbnail.jpg"; done
+          git reset --soft 1d0e74d731e51e692951c4e92f96c1ae14e2a32d
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Generate thumbnails
+          push_options: '--force'
